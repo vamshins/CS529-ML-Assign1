@@ -3,6 +3,12 @@ package edu.unm.ml;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ID3 {
 
@@ -17,17 +23,17 @@ public class ID3 {
 		double c = 0;
 		double t = 0;
 
-		BufferedReader br = null;
-		String sCurrentLine;
-		try {
+		Set<String> exampleSet = new HashSet<String>();
 
+		BufferedReader br = null;
+		String example;
+		int i = 0;
+		try {
 			br = new BufferedReader(new FileReader("resources/training.txt"));
-			while ((sCurrentLine = br.readLine()) != null) {
-				pm = sCurrentLine.charAt(sCurrentLine.length() - 1);
-				if (pm == '+')
-					p++;
-				else if (pm == '-')
-					m++;
+
+			while ((example = br.readLine()) != null) {
+				exampleSet.add(example);
+				i++;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -40,21 +46,32 @@ public class ID3 {
 			}
 		}
 
-		System.out.println("+ -> " + p);
-		System.out.println("- -> " + m);
+		int x = 57;
 		double sEntropyMain = 0;
+		
+		for (int j = 0; j < exampleSet.size(); j++) {
+			for (String exmain : exampleSet) {
+				pm = exmain.charAt(exmain.length() - 1);
+				if (pm == '+')
+					p++;
+				else if (pm == '-')
+					m++;
+			} // inner for loop 1
 
-		sEntropyMain = calculateEntropy(p, m);
+			System.out.println("+ -> " + p);
+			System.out.println("- -> " + m);			
 
-		System.out.println("sEntropyMain : " + sEntropyMain);
+			sEntropyMain = calculateEntropy(sEntropyMain, p, m);
 
-		double[] gain = new double[57];
+			System.out.println("sEntropyMain : " + sEntropyMain);
 
-		m = 0;
-		p = 0;
-		for (int i = 0; i < 57; i++) {
-			try {
-				br = new BufferedReader(new FileReader("resources/training.txt"));
+			ArrayList<Double> gain = new ArrayList<Double>();
+
+			m = 0;
+			p = 0;
+
+			boolean loopSuccess = false;
+			for (int k = 0; k < x; k++) {
 				Record rca = new Record();
 				Record rcg = new Record();
 				Record rcc = new Record();
@@ -63,35 +80,35 @@ public class ID3 {
 				g = 0;
 				c = 0;
 				t = 0;
-				while ((sCurrentLine = br.readLine()) != null) {
-					pm = sCurrentLine.charAt(sCurrentLine.length() - 1);
-					if (sCurrentLine.charAt(i) == 'a') {
+				for (String ex : exampleSet) {
+					pm = ex.charAt(ex.length() - 1);
+					if (ex.charAt(k) == 'a') {
 						a++;
-						rca.tm.put(sCurrentLine.charAt(i), pm);
+						rca.tm.put(ex.charAt(k), pm);
 						if (pm == '+')
 							rca.pmp++;
 						else if (pm == '-')
 							rca.pmm++;
 					}
-					if (sCurrentLine.charAt(i) == 'g') {
+					if (ex.charAt(k) == 'g') {
 						g++;
-						rcg.tm.put(sCurrentLine.charAt(i), pm);
+						rcg.tm.put(ex.charAt(k), pm);
 						if (pm == '+')
 							rcg.pmp++;
 						else if (pm == '-')
 							rcg.pmm++;
 					}
-					if (sCurrentLine.charAt(i) == 'c') {
+					if (ex.charAt(k) == 'c') {
 						c++;
-						rcc.tm.put(sCurrentLine.charAt(i), pm);
+						rcc.tm.put(ex.charAt(k), pm);
 						if (pm == '+')
 							rcc.pmp++;
 						else if (pm == '-')
 							rcc.pmm++;
 					}
-					if (sCurrentLine.charAt(i) == 't') {
+					if (ex.charAt(k) == 't') {
 						t++;
-						rct.tm.put(sCurrentLine.charAt(i), pm);
+						rct.tm.put(ex.charAt(k), pm);
 						if (pm == '+')
 							rct.pmp++;
 						else if (pm == '-')
@@ -99,38 +116,41 @@ public class ID3 {
 					}
 				} // while
 				double totalrows = a + g + c + t;
-				gain[i] = sEntropyMain - (a / totalrows) * calculateEntropy(rca.pmp, rca.pmm) - (g / totalrows) * calculateEntropy(rcg.pmp, rcg.pmm) - (c / totalrows)
-						* calculateEntropy(rcc.pmp, rcc.pmm) - (t / totalrows) * calculateEntropy(rct.pmp, rct.pmm);
-			} catch (IOException e) {
-				e.printStackTrace();
-			} finally {
-				try {
-					if (br != null)
-						br.close();
-				} catch (IOException ex) {
-					ex.printStackTrace();
-				}
-			}
-		} // for
-		double largest = gain[0];
-		int largestIndex = 0;
-		
-		for (int i = 0; i < gain.length; i++) {
-			System.out.println("gain[" + i + "] -> " + gain[i]);
-			if (gain[i] > largest) {
-				largestIndex = i;
-				largest = gain[i];
-			}
-		}
-		System.out.println("Gain (S, " + largestIndex + ") = " + largest + " is highest");
-	}
+				gain.add(sEntropyMain - (a / totalrows)
+						* calculateEntropy(0, rca.pmp, rca.pmm) - (g / totalrows)
+						* calculateEntropy(0, rcg.pmp, rcg.pmm) - (c / totalrows)
+						* calculateEntropy(0, rcc.pmp, rcc.pmm) - (t / totalrows)
+						* calculateEntropy(0, rct.pmp, rct.pmm));
+				loopSuccess = true;
+			} // inner for loop 2
 
-	private static double calculateEntropy(double p, double m) {
+			if (loopSuccess == true) {
+				double max = Collections.max(gain);
+				int maxIndex = gain.indexOf(max);
+
+				System.out.println("Gain (S, " + maxIndex + ") = " + max
+						+ " is highest");
+
+				Set<String> interimSet = new HashSet<String>();
+
+				for (String ex : exampleSet) {
+					String trimStr = ex.substring(0, maxIndex)
+							+ ex.substring(maxIndex + 1);
+					interimSet.add(trimStr);
+				} // inner for loop 3
+				exampleSet = interimSet;
+			} // if
+			x--;
+		} // outer for loop
+	} // main
+
+	private static double calculateEntropy(double sEntropyMain, double p, double m) {
 		if (p == 0)
 			p = 1;
 		if (m == 0)
 			m = 1;
-		return 0 - (m / (m + p)) * log2(m / (m + p)) - (p / (m + p)) * log2(p / (m + p));
+		return sEntropyMain - (m / (m + p)) * log2(m / (m + p)) - (p / (m + p))
+				* log2(p / (m + p));
 	}
 
 	public static double log2(double x) {
